@@ -6,7 +6,8 @@ Modified on Feb 06, 2020
 @author: Daniel Legorreta
 '''
 import numpy as np
-import pandas as pd 
+import pandas as pd
+import os 
 from pandas.io.parsers import read_csv as _read_csv
 from pandas.io.parsers import read_table as _read_txt
 
@@ -97,6 +98,14 @@ def write_txt(frame:Union[pd.DataFrame,np.ndarray], file_name:Union[str,Path], T
         frame=pd.DataFrame(frame)
     
     file_name=Path(file_name)
+
+    ## Ensure path to file exists
+    if(not os.path.exists(file_name)):
+        consitutent_parts = os.path.normpath(file_name).split(os.sep)
+        for i in range(1,len(consitutent_parts)):
+            cdir = os.path.join(*consitutent_parts[0:i])
+            if(not os.path.exists(cdir)):
+                os.mkdir(cdir)
 
     #index
     if T:

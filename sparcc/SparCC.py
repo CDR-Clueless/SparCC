@@ -5,6 +5,7 @@ from glob import glob
 from numba import njit
 from typing import List,Any
 
+import os
 import h5py
 import warnings
 import logging
@@ -21,6 +22,15 @@ try:
 except ImportError:
     from numpy import nanmedian
 
+DEBUG_MODE = False
+
+def debug_print(contents: str) -> None:
+    '''
+    Simple function to print the string 'contents' if DEBUG_MODE is set to True
+    '''
+    if(DEBUG_MODE):
+        print(contents)
+    return
 
 @njit()
 def Mesh(a:int):
@@ -256,6 +266,9 @@ def main_alg(frame,method:str='sparcc',
         Estimated basis covariance matrix.
 
     '''
+
+    debug_print(frame)
+    debug_print(f"path_subdir_cor:\n{path_subdir_cor}")
         
     if method in ['sparcc', 'clr']:
         for i in range(n_iter):
@@ -266,8 +279,9 @@ def main_alg(frame,method:str='sparcc',
             var_cov=np.diag(cov_sparse)
             #Create files 
             
-            file_name_cor=path_subdir_cor+'/cor_{:08d}.hdf5'.format(i)
-            file_name_cov=path_subdir_cov+'/cov_{:08d}.hdf5'.format(i)
+            file_name_cor=os.path.join(path_subdir_cor,'cor_{:08d}.hdf5'.format(i))
+            file_name_cov=os.path.join(path_subdir_cov,'cov_{:08d}.hdf5'.format(i))
+            debug_print(file_name_cor)
 
             h5f_cor=h5py.File(file_name_cor,'w')
             h5f_cov=h5py.File(file_name_cov,'w')
@@ -277,15 +291,26 @@ def main_alg(frame,method:str='sparcc',
             h5f_cov.close()
 
         logging.info("Processing the files from data directory")
-        filenames_cor=sorted([f for f in glob('data' + "**/corr_files/*", recursive=True)])
-        filenames_cov=sorted([f for f in glob('data' + "**/cov_files/*", recursive=True)])
+        filenames_cor=sorted([f for f in glob(os.path.join(path_subdir_cor, "cor_*"), recursive=True)])
+        filenames_cov=sorted([f for f in glob(os.path.join(path_subdir_cov, "cov_*"), recursive=True)])
+
+        debug_print(f"filenames_cor:\n{filenames_cor}")
+
         dsets_cor = [h5py.File(filename, mode='r') for filename in filenames_cor]
         dsets_cov = [h5py.File(filename, mode='r') for filename in filenames_cov]
+
+        debug_print(f"dsets_cor:\n{dsets_cor}")
+
         arrays_cor = [da.from_array(dset['dataset']) for dset in dsets_cor]
         arrays_cov = [da.from_array(dset['dataset']) for dset in dsets_cov]
 
+        debug_print(f"arrays_cor:\n{arrays_cor}")
+
         cor_array = da.asarray(arrays_cor)
         cov_array = da.asarray(arrays_cov)
+
+        debug_print(f"cor_array:\n{cor_array}")
+        debug_print(f"cov_array:\n{cov_array}")
 
         var_med=da.nanmedian(cov_array,axis=0).compute()
         cor_med=da.nanmedian(cor_array,axis=0).compute()
